@@ -6,43 +6,15 @@ class SoundJLayer extends JLayerPlayerPausable.PlaybackListener implements Runna
 	private String filePath;
 	private JLayerPlayerPausable player;
 	private Thread playerThread;
+	boolean isLooped;
 
 	/**
 	 * Constructor
 	 * @param filePath
 	 */
-	public SoundJLayer(String filePath) {
+	public SoundJLayer(String filePath, boolean isLooped) {
 		this.filePath = filePath;
-	}
-
-	/**
-	 * pause()
-	 */
-	public void pause() {
-		this.player.pause();
-
-		// DEPRECATED this.playerThread.stop();
-		//this.playerThread = null;
-		
-		try {
-			if (this.playerThread != null) {
-				this.playerThread.join();
-				this.playerThread = null;
-			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * pauseToggle()
-	 */
-	public void pauseToggle() {
-		if (this.player.isPaused == true) {
-			this.play();
-		} else {
-			this.pause();
-		}
+		this.isLooped = isLooped;
 	}
 
 	/**
@@ -54,10 +26,9 @@ class SoundJLayer extends JLayerPlayerPausable.PlaybackListener implements Runna
 		}
 
 		this.playerThread = new Thread(this, "AudioPlayerThread");
-
 		this.playerThread.start();
 	}
-
+	
 	/**
 	 * playerInitialize()
 	 */
@@ -69,112 +40,88 @@ class SoundJLayer extends JLayerPlayerPausable.PlaybackListener implements Runna
 			ex.printStackTrace();
 		}
 	}
-
-	// PlaybackListener members
-
-	public void playbackStarted(JLayerPlayerPausable.PlaybackEvent playbackEvent) {
-		System.out.println("playbackStarted");
-	}
-
-	public void playbackFinished(JLayerPlayerPausable.PlaybackEvent playbackEvent) {
-		System.out.println("playbackEnded");
-	}
-
-	// IRunnable members
-
-	public void run() {
-		try {
-			this.player.resume();
-		} catch (JavaLayerException ex) {
-			ex.printStackTrace();
-		}
-
-	}
-}
-
-
-
-
-
-/*
-class SoundJLayer extends JLayerPlayerPausable.PlaybackListener implements Runnable {
-	private String filePath;
-	private JLayerPlayerPausable player;
-	private Thread playerThread;
-	private static final int PLAY_FROM_START = 0;
-	private static final int PLAY_FROM_LAST_STOP = 1;
-	public int startPosition;
-
-	public SoundJLayer(String filePath) {
-		this.filePath = filePath;
-		this.startPosition = PLAY_FROM_LAST_STOP;
-	}
-
-	public SoundJLayer(String filePath, int startPosition) {
-		this.filePath = filePath;
-		this.startPosition = startPosition;
-	}
-
-	public void pause() {
-		this.player.pause();
-		try {
-			if (this.playerThread != null) {
-				this.playerThread.join();
-			}
-			this.startPosition = PLAY_FROM_LAST_STOP;
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-		this.playerThread = null;
-	}
-
-	public synchronized void pauseToggle() {
+	
+	/**
+	 * pauseToggle()
+	 */
+	public void pauseToggle() {
 		if (this.player.isPaused == true) {
 			this.play();
 		} else {
 			this.pause();
-			this.player.isPaused = true;
 		}
 	}
+	
+	/**
+	 * pause()
+	 */
+	public void pause() {
+		this.player.pause();
 
-	public void play() {
-		if (this.startPosition == PLAY_FROM_START || this.player == null) {
-			this.playerInitialize();
-		}
-		this.playerThread = new Thread(this, "AudioPlayerThread");
-		this.playerThread.start();
-	}
-
-	private void playerInitialize() {
+		// DEPRECATED this.playerThread.stop();
+		//this.playerThread = null;
+		
 		try {
-			String urlAsString = "file:///" + new java.io.File(".").getCanonicalPath() + "/" + this.filePath;
-
-			this.player = new JLayerPlayerPausable(new java.net.URL(urlAsString), this);
-		} catch (Exception ex) {
-			ex.printStackTrace();
+			if (this.playerThread != null) {
+				this.playerThread.interrupt();
+				// this.playerThread.join();
+				this.playerThread = null;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
+	
+	/**
+	 * stop()
+	 */
+	public void stop() {
+		this.player.stop();
+	}
 
-	// PlaybackListener members
-
+	// Override functions defined in abstract base class: class JLayerPlayerPausable.PlaybackListener 
+	/**
+	 * playbackStarted()
+	 */
 	public void playbackStarted(JLayerPlayerPausable.PlaybackEvent playbackEvent) {
-		System.out.println("playbackStarted()");
+		System.out.println("playbackStarted -- SOURCE: " + playbackEvent.source + " EVENT TYPE NAME: " + playbackEvent.eventType.name + " FRAME INDEX: " + playbackEvent.frameIndex);
+	}
+	
+	/**
+	 * playbackStopped
+	 */
+	public void playbackStopped(JLayerPlayerPausable.PlaybackEvent playbackEvent) {
+		System.out.println("playbackStopped -- SOURCE: " + playbackEvent.source + " EVENT TYPE NAME: " + playbackEvent.eventType.name + " FRAME INDEX: " + playbackEvent.frameIndex);
+	}
+	
+	/**
+	 * playbackPaused()
+	 */
+	public void playbackPaused(JLayerPlayerPausable.PlaybackEvent playbackEvent) {
+		System.out.println("playbackPaused -- SOURCE: " + playbackEvent.source + " EVENT TYPE NAME: " + playbackEvent.eventType.name + " FRAME INDEX: " + playbackEvent.frameIndex);
 	}
 
+	/**
+	 * playbackFinished()
+	 */
 	public void playbackFinished(JLayerPlayerPausable.PlaybackEvent playbackEvent) {
-		this.startPosition = PLAY_FROM_START;
-		System.out.println("playbackEnded()");
-		this.play();
+		System.out.println("playbackFinished -- SOURCE: " + playbackEvent.source + " EVENT TYPE NAME: " + playbackEvent.eventType.name + " FRAME INDEX: " + playbackEvent.frameIndex);
+		if (this.isLooped) {
+			this.player = null;
+			this.play();
+		}
 	}
-
-	// IRunnable members
-
+	
+	// Implement function for Runnable interface
+	/**
+	 * run()
+	 */
 	public void run() {
 		try {
 			this.player.resume();
 		} catch (JavaLayerException ex) {
 			ex.printStackTrace();
 		}
+
 	}
 }
-*/
